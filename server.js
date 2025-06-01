@@ -167,7 +167,7 @@ app.post('/api/analyze', async (req, res) => {
 
     // Send to Claude for analysis
     const message = await anthropic.messages.create({
-      model: "claude-3-sonnet-20240229",
+      model: "claude-3-7-sonnet-20250219",
       max_tokens: 2000,
       messages: [{
         role: "user",
