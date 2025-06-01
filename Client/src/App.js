@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Brain, Shield, Clock, BarChart3, Users, CheckCircle, ArrowRight, Loader2, AlertCircle, RefreshCw, LogOut } from 'lucide-react';
+import { Calendar, Brain, Shield, Clock, BarChart3, Users, CheckCircle, ArrowRight, Loader2, AlertCircle, RefreshCw, LogOut, Eye, EyeOff } from 'lucide-react';
 
 const WorkLifeBalanceApp = () => {
   const [currentView, setCurrentView] = useState('landing'); // landing, auth, analyzing, results
@@ -9,6 +9,8 @@ const WorkLifeBalanceApp = () => {
   const [calendarData, setCalendarData] = useState(null);
   const [analysisResults, setAnalysisResults] = useState(null);
   const [error, setError] = useState('');
+  const [showCalendar, setShowCalendar] = useState(true);
+  const [calendarViewMode, setCalendarViewMode] = useState('month'); // month, week, agenda
 
   // API call to connect Google Calendar
   const handleGoogleConnect = async () => {
@@ -50,6 +52,7 @@ const WorkLifeBalanceApp = () => {
         throw new Error(calendarData.error);
       }
       
+      setCalendarData(calendarData);
       setAnalysisProgress(40);
       
       // Send to Claude for analysis
@@ -146,6 +149,93 @@ const WorkLifeBalanceApp = () => {
     
     checkAuth();
   }, []);
+
+  // Google Calendar Embed Component
+  const GoogleCalendarEmbed = () => {
+    const calendarId = userEmail; // Using the user's email as calendar ID
+    const embedUrl = `https://calendar.google.com/calendar/embed?src=${encodeURIComponent(calendarId)}&ctz=America%2FNew_York&mode=${calendarViewMode}&showCalendars=0&showTabs=0&showPrint=0&showDate=1&showNav=1&showTitle=0&bgcolor=%23ffffff`;
+
+    return (
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Calendar className="w-5 h-5 text-blue-600" />
+              <h3 className="text-lg font-semibold text-gray-800">Your Google Calendar</h3>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* View Mode Toggle */}
+              <div className="flex bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setCalendarViewMode('month')}
+                  className={`px-3 py-1 text-sm rounded-md transition-all ${
+                    calendarViewMode === 'month' 
+                      ? 'bg-white text-blue-600 shadow-sm' 
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  Month
+                </button>
+                <button
+                  onClick={() => setCalendarViewMode('week')}
+                  className={`px-3 py-1 text-sm rounded-md transition-all ${
+                    calendarViewMode === 'week' 
+                      ? 'bg-white text-blue-600 shadow-sm' 
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  Week
+                </button>
+                <button
+                  onClick={() => setCalendarViewMode('agenda')}
+                  className={`px-3 py-1 text-sm rounded-md transition-all ${
+                    calendarViewMode === 'agenda' 
+                      ? 'bg-white text-blue-600 shadow-sm' 
+                      : 'text-gray-600 hover:text-gray-800'
+                  }`}
+                >
+                  Agenda
+                </button>
+              </div>
+              
+              {/* Hide/Show Calendar */}
+              <button
+                onClick={() => setShowCalendar(!showCalendar)}
+                className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-all"
+                title={showCalendar ? 'Hide Calendar' : 'Show Calendar'}
+              >
+                {showCalendar ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        {showCalendar && (
+          <div className="calendar-container">
+            <iframe
+              src={embedUrl}
+              style={{ 
+                border: 0,
+                width: '100%',
+                height: '600px',
+                backgroundColor: '#ffffff'
+              }}
+              frameBorder="0"
+              scrolling="no"
+              title="Google Calendar"
+            />
+          </div>
+        )}
+        
+        {!showCalendar && (
+          <div className="p-8 text-center text-gray-500">
+            <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
+            <p>Calendar hidden. Click the eye icon to show it.</p>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // Landing Page
   if (currentView === 'landing') {
@@ -450,7 +540,7 @@ const WorkLifeBalanceApp = () => {
     );
   }
 
-  // Results Page
+  // Results Page with Google Calendar Viewer
   if (currentView === 'results' && analysisResults) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -522,6 +612,11 @@ const WorkLifeBalanceApp = () => {
               <div className="text-4xl font-bold mb-2">{analysisResults.workLifeRatio}</div>
               <p className="text-purple-100">Well balanced</p>
             </div>
+          </div>
+
+          {/* Google Calendar Viewer - NEW ADDITION */}
+          <div className="mb-8">
+            <GoogleCalendarEmbed />
           </div>
 
           {/* Key Insight */}
