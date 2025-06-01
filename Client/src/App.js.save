@@ -9,15 +9,15 @@ const WorkLifeBalanceApp = () => {
   const [calendarData, setCalendarData] = useState(null);
   const [analysisResults, setAnalysisResults] = useState(null);
   const [error, setError] = useState('');
-
   // API call to connect Google Calendar
   const handleGoogleConnect = async () => {
     setIsConnecting(true);
     setError('');
     
     try {
-      // Redirect to Google OAuth - FIXED: Use correct backend URL
-      window.location.href = 'http://localhost:3001/api/auth/google';
+      // Redirect to Google OAuth
+      
+window.location.href = `http://localhost:3001/api/auth/google`;
     } catch (err) {
       setError('Failed to connect to Google Calendar. Please try again.');
       setIsConnecting(false);
@@ -30,22 +30,19 @@ const WorkLifeBalanceApp = () => {
     setCurrentView('analyzing');
     
     try {
-      // Fetch calendar data - FIXED: Use correct backend URL
+      // Fetch calendar data
       setAnalysisProgress(20);
-      const calendarResponse = await fetch('http://localhost:3001/api/calendar/fetch', {
-        credentials: 'include'
-      });
+      const calendarResponse = await fetch('/api/calendar/fetch');
       const calendarData = await calendarResponse.json();
       
       setAnalysisProgress(40);
       
-      // Send to Claude for analysis - FIXED: Use correct backend URL
+      // Send to Claude for analysis
       setAnalysisProgress(60);
-      const analysisResponse = await fetch('http://localhost:3001/api/analyze', {
+      const analysisResponse = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ calendarData }),
-        credentials: 'include'
+        body: JSON.stringify({ calendarData })
       });
       
       const results = await analysisResponse.json();
@@ -67,11 +64,7 @@ const WorkLifeBalanceApp = () => {
   };
 
   const handleLogout = async () => {
-    // FIXED: Use correct backend URL
-    await fetch('http://localhost:3001/api/auth/logout', { 
-      method: 'POST',
-      credentials: 'include'
-    });
+    await fetch('/api/auth/logout', { method: 'POST' });
     setCurrentView('landing');
     setUserEmail('');
     setCalendarData(null);
@@ -84,17 +77,7 @@ const WorkLifeBalanceApp = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // Check for OAuth success parameter first
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('auth') === 'success') {
-          // Clear the URL parameter
-          window.history.replaceState({}, document.title, window.location.pathname);
-        }
-        
-        // FIXED: Use correct backend URL with credentials
-        const response = await fetch('http://localhost:3001/api/auth/status', {
-          credentials: 'include'
-        });
+        const response = await fetch('/api/auth/status');
         const data = await response.json();
         if (data.authenticated) {
           setUserEmail(data.email);
