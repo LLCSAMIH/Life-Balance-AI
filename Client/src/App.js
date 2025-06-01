@@ -16,7 +16,7 @@ const WorkLifeBalanceApp = () => {
     setError('');
     
     try {
-      // Redirect to Google OAuth - FIXED: Use correct backend URL
+      // Redirect to Google OAuth
       window.location.href = 'http://localhost:3001/api/auth/google';
     } catch (err) {
       setError('Failed to connect to Google Calendar. Please try again.');
@@ -30,16 +30,29 @@ const WorkLifeBalanceApp = () => {
     setCurrentView('analyzing');
     
     try {
-      // Fetch calendar data - FIXED: Use correct backend URL
+      // Fetch calendar data
       setAnalysisProgress(20);
       const calendarResponse = await fetch('http://localhost:3001/api/calendar/fetch', {
         credentials: 'include'
       });
+      
+      console.log('Calendar response status:', calendarResponse.status);
+      
+      if (!calendarResponse.ok) {
+        throw new Error(`Calendar fetch failed: ${calendarResponse.status}`);
+      }
+      
       const calendarData = await calendarResponse.json();
+      console.log('Calendar data:', calendarData);
+      
+      // Check for errors in calendar data
+      if (calendarData.error) {
+        throw new Error(calendarData.error);
+      }
       
       setAnalysisProgress(40);
       
-      // Send to Claude for analysis - FIXED: Use correct backend URL
+      // Send to Claude for analysis
       setAnalysisProgress(60);
       const analysisResponse = await fetch('http://localhost:3001/api/analyze', {
         method: 'POST',
@@ -48,7 +61,18 @@ const WorkLifeBalanceApp = () => {
         credentials: 'include'
       });
       
+      if (!analysisResponse.ok) {
+        throw new Error(`Analysis failed: ${analysisResponse.status}`);
+      }
+      
       const results = await analysisResponse.json();
+      console.log('Analysis results:', results);
+      
+      // Check for errors in analysis results
+      if (results.error) {
+        throw new Error(results.error);
+      }
+      
       setAnalysisProgress(80);
       
       // Complete analysis
@@ -57,7 +81,8 @@ const WorkLifeBalanceApp = () => {
       setCurrentView('results');
       
     } catch (err) {
-      setError('Analysis failed. Please try again.');
+      console.error('Analysis error:', err);
+      setError(`Analysis failed: ${err.message}. Please try again.`);
       setCurrentView('auth');
     }
   };
@@ -67,11 +92,15 @@ const WorkLifeBalanceApp = () => {
   };
 
   const handleLogout = async () => {
-    // FIXED: Use correct backend URL
-    await fetch('http://localhost:3001/api/auth/logout', { 
-      method: 'POST',
-      credentials: 'include'
-    });
+    try {
+      await fetch('http://localhost:3001/api/auth/logout', { 
+        method: 'POST',
+        credentials: 'include'
+      });
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
+    
     setCurrentView('landing');
     setUserEmail('');
     setCalendarData(null);
@@ -89,21 +118,32 @@ const WorkLifeBalanceApp = () => {
         if (urlParams.get('auth') === 'success') {
           // Clear the URL parameter
           window.history.replaceState({}, document.title, window.location.pathname);
+          console.log('OAuth success detected, checking auth status...');
         }
         
-        // FIXED: Use correct backend URL with credentials
+        // Check authentication status
         const response = await fetch('http://localhost:3001/api/auth/status', {
           credentials: 'include'
         });
+        
+        if (!response.ok) {
+          console.log('Auth status check failed:', response.status);
+          return;
+        }
+        
         const data = await response.json();
+        console.log('Auth status response:', data);
+        
         if (data.authenticated) {
           setUserEmail(data.email);
           setCurrentView('auth');
+          console.log('User authenticated:', data.email);
         }
       } catch (err) {
-        console.log('Not authenticated');
+        console.error('Auth check error:', err);
       }
     };
+    
     checkAuth();
   }, []);
 
@@ -121,7 +161,10 @@ const WorkLifeBalanceApp = () => {
                 </div>
                 <h1 className="text-xl font-bold text-white">LifeBalance AI</h1>
               </div>
-              <button className="bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/30 text-white px-4 py-2 rounded-lg transition-all">
+              <button 
+                onClick={() => setCurrentView('auth')}
+                className="bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/30 text-white px-4 py-2 rounded-lg transition-all"
+              >
                 Sign In
               </button>
             </div>
@@ -218,6 +261,54 @@ const WorkLifeBalanceApp = () => {
 
   // Auth/Connect Page
   if (currentView === 'auth') {
+    // If user is authenticated, show analysis button
+    if (userEmail) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
+            <div className="text-center mb-8">
+              <div className="bg-gradient-to-r from-green-500 to-emerald-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Connected Successfully!</h2>
+              <p className="text-gray-600 mb-2">
+                Welcome, {userEmail}
+              </p>
+              <p className="text-sm text-gray-500">
+                Your Google Calendar is now connected and ready for analysis.
+              </p>
+            </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                <span className="text-red-700 text-sm">{error}</span>
+              </div>
+            )}
+
+            <button
+              onClick={startAnalysis}
+              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-3 mb-4"
+            >
+              <Brain className="w-5 h-5" />
+              Start AI Analysis
+              <ArrowRight className="w-5 h-5" />
+            </button>
+
+            <div className="text-center">
+              <button
+                onClick={handleLogout}
+                className="text-gray-500 hover:text-gray-700 text-sm transition-colors"
+              >
+                Use different account
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // If not authenticated, show connect button
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
@@ -450,14 +541,14 @@ const WorkLifeBalanceApp = () => {
           <div className="bg-white rounded-xl shadow-lg p-8">
             <h3 className="text-xl font-semibold text-gray-800 mb-6">Personalized Recommendations</h3>
             <div className="space-y-4">
-              {analysisResults.recommendations.map((rec, index) => (
+              {analysisResults?.recommendations?.map((rec, index) => (
                 <div key={index} className="flex items-start gap-4 p-4 bg-blue-50 rounded-lg">
                   <div className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-semibold flex-shrink-0">
                     {index + 1}
                   </div>
                   <p className="text-gray-700">{rec}</p>
                 </div>
-              ))}
+              )) || <p className="text-gray-500">No recommendations available.</p>}
             </div>
           </div>
 

@@ -70,7 +70,7 @@ app.get('/api/auth/google/callback', async (req, res) => {
     res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}?auth=success`);
   } catch (error) {
     console.error('Auth error:', error);
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}?auth=error`);
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/connect?auth=error`);
   }
 });
 
